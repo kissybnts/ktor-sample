@@ -1,5 +1,7 @@
 package com.kissybnts
 
+import com.kissybnts.entities.UserEntity
+import com.kissybnts.schemas.UserTable
 import io.ktor.application.Application
 import io.ktor.application.call
 import io.ktor.application.install
@@ -9,13 +11,29 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.response.respond
 import io.ktor.routing.Routing
 import io.ktor.routing.get
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.transactions.transaction
 
 fun Application.main() {
+    Database.connect("jdbc:mysql://127.0.0.1/ktor_sample?useSSL=false", "com.mysql.cj.jdbc.Driver", "user", "user")
+    transaction {
+        UserEntity.new {
+            name = "sample user"
+            password = "sample password"
+        }
+    }
     install(DefaultHeaders)
     install(CallLogging)
     install(Routing) {
         get("/") {
             call.respond(HttpStatusCode.OK, "Hello world from Ktor!")
+        }
+        get("/users") {
+            val names = transaction {
+                UserEntity.all().map { it.name }.joinToString(", ")
+            }
+            call.respond(HttpStatusCode.OK, names)
         }
     }
 }
